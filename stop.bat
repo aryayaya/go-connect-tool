@@ -1,4 +1,6 @@
 @echo off
+chcp 65001 >nul
+
 set "APP_NAME=go-connect-tool.exe"
 
 echo 正在尝试关闭程序 %APP_NAME%...
