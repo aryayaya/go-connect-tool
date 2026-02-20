@@ -66,6 +66,18 @@
             font-size: 12px;
         }
 
+        .btn-edit {
+            background-color: #f59e0b;
+            color: white;
+            padding: 5px 10px;
+            font-size: 12px;
+            margin-right: 4px;
+        }
+
+        .btn-edit:hover {
+            background-color: #d97706;
+        }
+
         .card {
             background-color: var(--card-bg);
             border-radius: 8px;
@@ -148,6 +160,55 @@
             flex-direction: column;
             gap: 10px;
         }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 28px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal h3 {
+            margin: 0 0 20px;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .modal-actions button {
+            flex: 1;
+        }
+
+        .btn-cancel {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+
+        .btn-cancel:hover {
+            background-color: #d1d5db;
+        }
     </style>
 </head>
 
@@ -217,9 +278,36 @@
         </div>
     </div>
 
+    <!-- Edit Modal -->
+    <div class="modal-overlay" id="edit-modal">
+        <div class="modal">
+            <h3>Edit Site</h3>
+            <input type="hidden" id="edit-id">
+
+            <label>Name</label>
+            <input type="text" id="edit-name" placeholder="Google" required>
+
+            <label>URL</label>
+            <input type="text" id="edit-url" placeholder="google.com" required>
+
+            <label>Method</label>
+            <select id="edit-method">
+                <option value="http">HTTP/HTTPS</option>
+                <option value="tcp">TCP Connect</option>
+                <option value="ping">Ping (ICMP)</option>
+            </select>
+
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeEditModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEdit()">Save</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // State
         let sites = [];
+        let lastResults = {};
 
         // Init
         document.addEventListener('DOMContentLoaded', () => {
@@ -227,10 +315,15 @@
             fetchProxy();
         });
 
+        // Close modal when clicking overlay background
+        document.getElementById('edit-modal').addEventListener('click', function (e) {
+            if (e.target === this) closeEditModal();
+        });
+
         async function fetchSites() {
             const res = await fetch('/api/sites');
             sites = await res.json();
-            renderSites();
+            renderSites(lastResults);
         }
 
         async function fetchProxy() {
@@ -267,6 +360,7 @@
                     <td>${statusHtml}</td>
                     <td>${latency}</td>
                     <td>
+                        <button class="btn btn-edit" onclick="openEditModal('${site.id}')">Edit</button>
                         <button class="btn btn-danger" onclick="deleteSite('${site.id}')">Delete</button>
                     </td>
                 `;
@@ -293,6 +387,43 @@
         async function deleteSite(id) {
             if (!confirm('Are you sure?')) return;
             await fetch(`/api/sites?id=${id}`, { method: 'DELETE' });
+            fetchSites();
+        }
+
+        function openEditModal(id) {
+            const site = sites.find(s => s.id === id);
+            if (!site) return;
+
+            document.getElementById('edit-id').value = site.id;
+            document.getElementById('edit-name').value = site.name;
+            document.getElementById('edit-url').value = site.url;
+            document.getElementById('edit-method').value = site.method;
+
+            document.getElementById('edit-modal').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').classList.remove('active');
+        }
+
+        async function saveEdit() {
+            const id = document.getElementById('edit-id').value;
+            const name = document.getElementById('edit-name').value.trim();
+            const url = document.getElementById('edit-url').value.trim();
+            const method = document.getElementById('edit-method').value;
+
+            if (!name || !url) {
+                alert('Name and URL cannot be empty.');
+                return;
+            }
+
+            await fetch('/api/sites', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, name, url, method })
+            });
+
+            closeEditModal();
             fetchSites();
         }
 
@@ -327,6 +458,7 @@
                     });
                 }
 
+                lastResults = resultsMap;
                 renderSites(resultsMap);
             } catch (err) {
                 console.error(err);

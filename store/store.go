@@ -81,6 +81,18 @@ func (s *Store) AddSite(site Site) error {
 	return s.Save()
 }
 
+func (s *Store) UpdateSite(updated Site) error {
+	s.mu.Lock()
+	for i, site := range s.Data.Sites {
+		if site.ID == updated.ID {
+			s.Data.Sites[i] = updated
+			break
+		}
+	}
+	s.mu.Unlock()
+	return s.Save()
+}
+
 func (s *Store) RemoveSite(id string) error {
 	s.mu.Lock()
 	newSites := []Site{}

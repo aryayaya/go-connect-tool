@@ -57,6 +57,18 @@ func handleSites(w http.ResponseWriter, r *http.Request) {
 		}
 		dataStore.AddSite(site)
 		json.NewEncoder(w).Encode(site)
+	case "PUT":
+		var site store.Site
+		if err := json.NewDecoder(r.Body).Decode(&site); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if site.ID == "" {
+			http.Error(w, "Missing id", http.StatusBadRequest)
+			return
+		}
+		dataStore.UpdateSite(site)
+		json.NewEncoder(w).Encode(site)
 	case "DELETE":
 		id := r.URL.Query().Get("id")
 		if id == "" {
